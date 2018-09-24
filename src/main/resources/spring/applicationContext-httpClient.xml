@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd">
+
+	<!-- spring和HttpClient的整合 -->
+	
+	<!-- 1.把HttpClient交给spring管理：
+		 原本是通过先创建连接池，再通过CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(cm).build();得到HTTPClient对象。
+		 代码见:/itcast-httpclient/src/main/java/cn/itcast/httpclient/HttpConnectManager.java的doGet()方法。
+		 现在要通过spring的配置来完成：
+	-->
+	<!-- 1.1.1 配置HttpConnect连接池： -->
+	<bean id="poolingHttpClientConnectionManager" class="org.apache.http.impl.conn.PoolingHttpClientConnectionManager">
+		<!-- 最大连接数： -->
+		<property name="maxTotal" value="${http.maxTotal}" />
+		<!-- 设置每个主机地址的并发数 -->
+		<property name="defaultMaxPerRoute" value="${http.defaultMaxPerRoute}" />
+	</bean>
+	
+	<!-- 1.1.2 配置IdleConnectionEvictor对象，用于定期关闭连接池中的失效连接： -->
+	<bean class="com.taotao.common.httpClient.IdleConnectionEvictor">
+		<!-- 构造函数中需要传入一个HttpClientConnectionManager-->
+		<constructor-arg index="0" ref="poolingHttpClientConnectionManager"></constructor-arg>
+	</bean>
+	
+	<!-- 1.2 构建HttpClient对象。相当于"HttpClients.custom()"代码：（怎么知道相当于"HttpClients.custom()"代码——>要点开custom()方法才能知道：） -->
+	<bean id="httpClientBuilder" class="org.apache.http.impl.client.HttpClientBuilder">
+		<!-- 1.3 相当于".setConnectionManager(cm)"代码 -->
+		<property name="connectionManager" ref="poolingHttpClientConnectionManager"></property>
+	</bean>
+	
+	<!-- 1.4 CloseableHttpClient对象的管理。该对象应该是多例的。
+		相当于".build()"代码： -->
+	<bean class="org.apache.http.impl.client.CloseableHttpClient" 
+		factory-bean="httpClientBuilder" factory-method="build" 
+		scope="prototype" ></bean>
+	
+	<!-- 2.HTTPClient请求配置的构建器
+		代码见：/itcast-httpclient/src/main/java/cn/itcast/httpclient/RequestConfigDemo.java
+	 -->
+	<!-- 2.1 requestConfigBuilder对象。
+		 相当与"RequestConfig.custom().set……"代码： -->
+	<bean id="requestConfigBuilder" class="org.apache.http.client.config.RequestConfig.Builder">
+		<!-- 和请求的服务端创建连接的最长时间。如果不设置，默认是没有时间限制，这不合理 -->
+		<property name="connectTimeout" value="${http.connectTimeout}"></property>
+		<!-- 从连接池中获取到连接的最长时间 -->
+		<property name="connectionRequestTimeout" value="${http.connectionRequestTimeout}"></property>
+		<!-- 数据传输的最长时间，超过这个时间还没传输完就说明数据太大了，就拒收了。 -->
+		<property name="socketTimeout" value="${http.socketTimeout}"></property>
+		<!-- 提交请求前测试连接是否可用 -->
+		<property name="staleConnectionCheckEnabled" value="${http.staleConnectionCheckEnabled}"></property>
+	</bean>
+	
+	<!-- 2.2 RequestConfig对象：
+		 相当于".build();"代码 -->
+	<bean id="requestConfig" class="org.apache.http.client.config.RequestConfig" 
+		factory-bean="requestConfigBuilder" factory-method="build" ></bean>
+	
+	<!-- 为什么又不管理HttpGet和HttpPost对象了？
+		 因为他们都只能通过构造器传进url，而没有setURL()方法来设置url。
+		 每个请求的url都是不同的，所以。。。
+	 -->
+	<!-- 2.3.1 HttpGet对象：设置请求配置信息到HttpGet对象中。必须是多例的！！！
+		 相当于"httpGet.setConfig(config);"代码 -->
+	<!-- 
+	<bean id="httpGet" class="org.apache.http.client.methods.HttpGet" scope="prototype">
+		
+		<property name="config" ref="requestConfig"></property>
+	</bean>
+	 -->
+	 
+	<!-- 2.3.2 HttpPost对象：设置请求配置信息到HttpPOST对象中。必须是多例的！！！ -->
+	<!-- 
+	<bean id="httpPost" class="org.apache.http.client.methods.HttpPost" scope="prototype">
+		<constructor-arg index="config" ref="requestConfig"></constructor-arg>
+	</bean>
+	 -->
+	 
+</beans>

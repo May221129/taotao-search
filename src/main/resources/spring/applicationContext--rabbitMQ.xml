@@ -1,0 +1,48 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+	xsi:schemaLocation="http://www.springframework.org/schema/rabbit
+	http://www.springframework.org/schema/rabbit/spring-rabbit-1.4.xsd
+	http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-4.0.xsd">
+
+	<!-- 定义RabbitMQ的连接工厂 -->
+	<rabbit:connection-factory id="connectionFactory"
+		host="${rabbitmq.host}" 
+		port="${rabbitmq.port}" 
+		username="${rabbitmq.username}"
+		password="${rabbitmq.password}" 
+		virtual-host="${rabbitmq.vhost}" />
+
+	<!-- 管理 -->
+	<rabbit:admin connection-factory="connectionFactory" />
+
+	<!-- 定义队列 -->
+	<rabbit:queue name="taotao-search-topicExchange" auto-declare="true" durable="true"/>
+	
+	<!-- 消费者对象 -->
+	<bean id="subscribeMessageByRabbitMQ" class="com.taotao.search.mq.SubscribeMessageByRabbitMQ"/>
+	
+	<!-- 监听队列 -->
+	<rabbit:listener-container connection-factory="connectionFactory">
+		<rabbit:listener ref="subscribeMessageByRabbitMQ" method="listen" queue-names="taotao-search-topicExchange"/>
+	</rabbit:listener-container>
+	
+	<!-- 
+		注意：消息生产者将消息发送到交换机就完成了它的任务。所以在消息生产者这端的配置文件中，不用配置队列，也不用配置交换机和队列的绑定。
+		但是，消息消费者这端只负责队列，不负责交换机，所以在消息消费者那端也不能配置交换机和队列的绑定。
+		
+		提问：哪里配置交换机和队列的绑定？
+		
+		答：在管理界面完成：http://127.0.0.1:15672/#/exchanges 。由消息生产者这端来维护，如果其他端需要有绑定需求，得发邮件申请。
+	-->
+	<!-- 定义交换器，自动声明。
+		自动声明的作用：如果指定的交换机不存在，就自动创建；如果存在就忽略。确保消息消费者那头不会报错。
+		durable="false":该交换机在RabbitMQ中不被持久化。
+	<rabbit:topic-exchange name="taotao-topicExchange" auto-declare="true">
+		<rabbit:bindings>
+			<rabbit:binding queue="searchPortQueue" pattern="item.#" />
+		</rabbit:bindings>
+	</rabbit:topic-exchange>
+ 	-->
+ 	
+</beans>

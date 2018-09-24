@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd">
+	
+	<!-- spring和solr的整合文件： -->
+	<!-- 怎么写要参考 /itcast-solrj/src/test/java/cn/itcast/solrj/service/ItemDataImport.java中的setUp()方法。 -->
+	<bean class="org.apache.solr.client.solrj.impl.HttpSolrServer">
+		<constructor-arg index="0" value="${solr.url}"></constructor-arg>
+		<property name="parser">
+			<!-- 
+				为什么使用的是xml解析器：
+				其实solr的返回数据有两种：xml和json，但是官方只提供了xml的响应解析器。
+				如果想要返回json数据而非xml数据怎么办？自己写一个json的响应解析器。
+			 -->
+			<bean class="org.apache.solr.client.solrj.impl.XMLResponseParser"></bean>
+		</property>
+		<!-- 重试次数，默认设置为1： -->
+		<property name="maxRetries" value="${solr.maxRetries}"></property>
+		<!-- 连接的超时时间： -->
+		<property name="connectionTimeout" value="${solr.connectionTimeout}"></property>
+	</bean>
+
+</beans>
