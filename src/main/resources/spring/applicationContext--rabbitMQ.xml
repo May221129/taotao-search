@@ -14,7 +14,7 @@
 		virtual-host="${rabbitmq.vhost}" />
 
 	<!-- 管理 -->
-	<rabbit:admin connection-factory="connectionFactory" />
+	<rabbit:admin connection-factory="connectionFactory"/>
 
 	<!-- 定义队列 -->
 	<rabbit:queue name="taotao-search-topicExchange" auto-declare="true" durable="true"/>
